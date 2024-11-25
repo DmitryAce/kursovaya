@@ -1,0 +1,75 @@
+{% extends "core/base.html" %}
+
+{% block title %}Items{% endblock title %}
+
+{% block content %}
+    <div class="grid grid-cols-4 gap-4 container mx-auto">
+        <div class="col-span-1">
+            <form method="get" action="{% url 'item:items' %}" class="pl-2 pt-2">
+                <input name="query" class="w-full py-4 px-6 border rounded-xl" type="text" value="{{ query }}" placeholder="Найти...">
+
+                <button class="mt-2 py-4 px-8 text-lg bg-violet-500 text-white rounded-xl">Поиск</button>
+            </form>
+            <hr class="my-6">
+
+            <p class="font-semibold pl-2 text-2xl">Категории</p>
+
+            <ul class="pl-2">
+                {% for category in categories %}
+                    <li class="py-2 px-2 rounded-xl{% if category.id == category_id %} bg-gray-200{% endif %}">
+                        <a href="{% url 'item:items' %}?query={{ query }}&category={{ category.id }}">{% if category.id == category_id %}➤{% endif %}{{ category.name }}</a>
+                    </li>
+                {% endfor %}
+            </ul>
+
+            <hr class="my-6">
+
+            <p class="font-semibold pl-2 text-2xl">Очистить фильтры</p>
+            <ul class="pl-2">
+                <li>
+                    <a href="{% url 'item:items' %}" class="mt-2 py-4 px-8 inline-block bg-gray-500 text-white rounded-xl text-lg hover:bg-gray-700">Очистить</a>
+                </li>
+            </ul>
+        </div>
+
+        <div class="col-span-3 pt-2 pr-2">
+            <div class="grid grid-cols-3 gap-3 flash-animate" id="items-container">
+                {% include 'item/items_list.html' %}
+            </div>
+            {% include "item/pagination.html" %}
+        </div>
+
+    </div>
+{% endblock content %}
+
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        function loadItems(page) {
+            const query = new URLSearchParams(window.location.search).get('query') || '';
+            const category = new URLSearchParams(window.location.search).get('category') || 0;
+        
+            fetch(`?page=${page}&query=${query}&category=${category}`, {
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                },
+            })
+            .then(response => response.json())
+            .then(data => {
+                document.querySelector('#items-container').innerHTML = data.html;
+            })
+            .catch(error => console.error('Error:', error));
+        }
+        
+    
+        // Используем делегирование событий
+        document.querySelector('#items-container').addEventListener('click', function(event) {
+            if (event.target.tagName === 'A') {
+                event.preventDefault();
+                const page = new URL(event.target.href).searchParams.get('page');
+                loadItems(page);
+            }
+        });
+    });    
+</script>    
+

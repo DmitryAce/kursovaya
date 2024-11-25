@@ -1,0 +1,65 @@
+{% extends 'core/base.html' %}
+
+{% block title %}Dashboard{% endblock %}
+
+{% block content %}
+<div class="container mx-auto">
+    <div class="mt-6 px-6 py-12 bg-gray-100 rounded-xl">
+        <h2 class="mb-12 text-2xl text-center font-semibold">Мои товары</h2>
+
+        <div class="grid grid-cols-3 gap-3"  id="items-container">
+            {% include 'item/items_list.html' %}
+        </div>
+
+        {% include "item/pagination.html" %}
+    </div>
+
+    <div class="mt-6 px-6 py-12 bg-gray-100 rounded-xl">
+        <h2 class="mb-12 text-2xl text-center font-semibold">Категории</h2>
+
+        <div class="grid grid-cols-3 gap-3">
+            {% for category in categories %}
+            <div>
+                <a href="{% url 'dashboard:category' category.id %}">
+                    <div class="p-6 bg-white rounded-b-xl">
+                        <h2 class="text-2xl">{{ category.name }}</h2>
+                        {% load word_filters %}
+                        <p class="text-gray-500">{{ category.user_item_count|pluralize:"товар,товара,товаров"}}</p>
+                    </div>
+                </a>
+            </div>
+            {% endfor %}
+        </div>        
+    </div>
+</div>
+{% endblock %}
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        function loadItems(page) {
+            const query = new URLSearchParams(window.location.search).get('query') || '';
+            const category = new URLSearchParams(window.location.search).get('category') || 0;
+        
+            fetch(`?page=${page}&query=${query}&category=${category}`, {
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                },
+            })
+            .then(response => response.json())
+            .then(data => {
+                document.querySelector('#items-container').innerHTML = data.html;
+            })
+            .catch(error => console.error('Error:', error));
+        }
+        
+    
+        // Используем делегирование событий
+        document.querySelector('#items-container').addEventListener('click', function(event) {
+            if (event.target.tagName === 'A') {
+                event.preventDefault();
+                const page = new URL(event.target.href).searchParams.get('page');
+                loadItems(page);
+            }
+        });
+    });    
+</script>    
