@@ -1,19 +1,16 @@
-from django.shortcuts import render
+from django.shortcuts import render, get_object_or_404
 from django.http import JsonResponse
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.template.loader import render_to_string
 from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import IsAuthenticated
-from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, AllowAny
 from drf_yasg.utils import swagger_auto_schema
 from django.db.models import Count, Q
 from drf_yasg import openapi
 
 from item.models import Item, Category
 
-
 PAGINATION = 2
-
 
 item_list_response = openapi.Response(
     description="List of items",
@@ -50,6 +47,19 @@ item_list_response = openapi.Response(
     )
 )
 
+def paginate_items(request, items):
+    """Helper function to paginate items."""
+    paginator = Paginator(items, PAGINATION)
+    page = request.GET.get('page')
+
+    try:
+        items = paginator.page(page)
+    except PageNotAnInteger:
+        items = paginator.page(1)
+    except EmptyPage:
+        items = paginator.page(paginator.num_pages)
+
+    return items, paginator
 
 @swagger_auto_schema(
     method='get',
@@ -67,22 +77,32 @@ def index(request):
         user_item_count=Count('items', filter=Q(items__created_by=request.user))
     )
     
-    paginator = Paginator(items, PAGINATION)
-    page = request.GET.get('page')
+    items, paginator = paginate_items(request, items)
 
-    try:
-        items = paginator.page(page)
-    except PageNotAnInteger:
-        items = paginator.page(1)
-    except EmptyPage:
-        items = paginator.page(paginator.num_pages)
-
-    if request.headers.get('x-requested-with') == 'XMLHttpRequest':
-        html = render_to_string('item/items_list.html', {
-            'items': items,
-            'paginator': paginator,
-        })
-        return JsonResponse({'html': html})
+    # Определяем, HTML или JSON требуется вернуть
+    if request.headers.get('accept') == 'application/json':
+        items_json = [
+            {
+                'id': item.id,
+                'name': item.name,
+                'description': item.description,
+                'price': item.price,
+                'image': item.image.url if item.image else None,
+                'is_sold': item.is_sold,
+                'created_by': item.created_by.id,
+                'created_at': item.created_at,
+            }
+            for item in items
+        ]
+        categories_json = [
+            {
+                'id': category.id,
+                'name': category.name,
+                'user_item_count': category.user_item_count,
+            }
+            for category in categories
+        ]
+        return JsonResponse({'items': items_json, 'categories': categories_json})
 
     return render(request, 'dashboard/index.html', {
         'items': items,
@@ -108,26 +128,28 @@ def index(request):
 @api_view(['GET'])
 @permission_classes([AllowAny])
 def category(request, pk):
-    categoryName = Category.objects.get(pk=pk)
-    categoryname = "Мои товары в категории "+str(Category.objects.get(pk=pk)).lower()
+    categoryName = get_object_or_404(Category, pk=pk)
+    categoryname = "Мои товары в категории " + str(categoryName).lower()
     items = Item.objects.filter(is_sold=False, category=pk, created_by=request.user)
     
-    paginator = Paginator(items, PAGINATION)
-    page = request.GET.get('page')
+    items, paginator = paginate_items(request, items)
 
-    try:
-        items = paginator.page(page)
-    except PageNotAnInteger:
-        items = paginator.page(1)
-    except EmptyPage:
-        items = paginator.page(paginator.num_pages)
-
-    if request.headers.get('x-requested-with') == 'XMLHttpRequest':
-        html = render_to_string('item/items_list.html', {
-            'items': items,
-            'paginator': paginator,
-        })
-        return JsonResponse({'html': html})
+    # Определяем, HTML или JSON требуется вернуть
+    if request.headers.get('accept') == 'application/json':
+        items_json = [
+            {
+                'id': item.id,
+                'name': item.name,
+                'description': item.description,
+                'price': item.price,
+                'image': item.image.url if item.image else None,
+                'is_sold': item.is_sold,
+                'created_by': item.created_by.id,
+                'created_at': item.created_at,
+            }
+            for item in items
+        ]
+        return JsonResponse({'items': items_json, 'category': {'id': categoryName.id, 'name': categoryName.name}})
 
     return render(request, 'item/category.html', {
         'items': items,

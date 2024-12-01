@@ -37,6 +37,8 @@ INSTALLED_APPS = [
     # additions
     'drf_yasg',
     'rest_framework',
+    'django_er_diagram',
+    'django_extensions',
 ]
 
 MIDDLEWARE = [
@@ -77,6 +79,16 @@ DATABASES = {
     'default': env.db(),
 }
 
+# DATABASES = {
+#     'default': {
+#         'ENGINE': 'django.db.backends.postgresql',
+#         'NAME': 'django_kursovaya',
+#         'USER': 'django_admin',
+#         'PASSWORD': '01B8D653E194046F069EE33442C35B9E',
+#         'HOST': '127.0.0.1',
+#         'PORT': '5432',
+#     }
+# }
 
 # Password validation
 # https://docs.djangoproject.com/en/5.1/ref/settings/#auth-password-validators
